@@ -14,7 +14,12 @@ def qos_class(cpu_req: int, cpu_lim: int, mem_req: int, mem_lim: int) -> str:
     Guaranteed: cpu and memory both set with request == limit (> 0).
     BestEffort: no cpu or memory request/limit set at all.
     Burstable:  anything in between.
-    (Extended resources such as a GPU are not inputs -- they do not affect QoS.)"""
+    (Extended resources such as a GPU are not inputs -- they do not affect QoS.)
+
+    This models the four scenarios the study runs (request-side values). It does not
+    reproduce Kubernetes' request<-limit defaulting (a limit-only container is treated
+    as request==limit by the apiserver), so it is not a general QoS oracle; the study's
+    reported QoS always comes from the live API `status.qosClass`, not this helper."""
     any_set = any(v > 0 for v in (cpu_req, cpu_lim, mem_req, mem_lim))
     if not any_set:
         return "BestEffort"

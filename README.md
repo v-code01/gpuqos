@@ -3,14 +3,15 @@
 **A pod that requests only a GPU is BestEffort QoS -- the kernel's first OOM victim
 (oom_score_adj 1000) -- because Kubernetes computes QoS from CPU and memory alone.**
 
-Kubernetes decides which pods to kill first under node memory pressure from their QoS
-class, and QoS is computed from CPU and memory requests/limits ONLY. A GPU is an
-extended resource, so it does not count -- a pod that asks for a GPU but no CPU or
-memory is classified BestEffort, exactly as if it had requested nothing. This study
-drives a real single-node cluster (minikube) and reads two independent signals per pod
--- the API `status.qosClass` and the kernel `oom_score_adj` from
-`/proc/1/oom_score_adj` -- to show that the scarce-GPU holder is the process the kernel
-kills first.
+Both mechanisms that reclaim memory rank pods by QoS class -- the kubelet eviction
+manager (which evicts BestEffort first under node MemoryPressure) and, below it, the
+Linux OOM killer (which the kubelet configures via `oom_score_adj`). QoS is computed
+from CPU and memory requests/limits ONLY. A GPU is an extended resource, so it does not
+count -- a pod that asks for a GPU but no CPU or memory is classified BestEffort,
+exactly as if it had requested nothing. This study drives a real single-node cluster
+(minikube) and reads two independent signals per pod -- the API `status.qosClass` and
+the kernel `oom_score_adj` from `/proc/1/oom_score_adj` -- to show that the scarce-GPU
+holder is the process both paths kill first (they agree; BestEffort is worst in each).
 
 ## The GPU is a fake integer resource (disclosed)
 
@@ -59,9 +60,11 @@ recorded values with its own arithmetic (it shares no code with `src/` or
 ## Note on the exact numbers
 
 BestEffort (1000) and Guaranteed (-997) are fixed kernel constants. The Burstable value
-(999 here) follows the documented formula `1000 - 1000 * memoryRequest /
-nodeAllocatableMemory`, so it depends on the node's memory size; the study asserts it
-as a strict ordering (`-997 < Burstable < 1000`), not an exact number.
+follows the documented formula `1000 - 1000 * memoryRequest / nodeAllocatableMemory`,
+which the kubelet then clamps to `[3, 999]` (so Burstable is always strictly below
+BestEffort). For a small memory request the raw formula rounds to 1000 and the clamp
+pins it to 999 -- which is why P4's ordering can never flip on any node. The study
+asserts the strict ordering (`-997 < Burstable < 1000`), not the exact 999.
 
 ## Layout
 
