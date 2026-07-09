@@ -1,0 +1,43 @@
+# Machine-checkable claims for gpuqos. Each maps to an assertion in
+# tools/verify.py, recomputed from results/runs.jsonl independently of src/analyze.
+
+[env]
+cluster = "minikube single-node (real kube QoS classification + kernel oom_score_adj)"
+gpu = "fake integer extended resource example.com/gpu (node-status patch; busybox sleep pods; no GPU compute)"
+signals = ["status.qosClass (API)", "/proc/1/oom_score_adj (kernel)"]
+
+[[claim]]
+id = "P1"
+name = "a GPU is invisible to QoS"
+statement = "A pod requesting only example.com/gpu is BestEffort with oom_score_adj 1000, identical to a pod requesting nothing."
+gpu_only_qos = "BestEffort"
+gpu_only_oom = 1000
+same_as_bare = true
+held = true
+
+[[claim]]
+id = "P2"
+name = "memory lifts to Burstable"
+statement = "Adding a memory request makes the pod Burstable with -997 < oom_score_adj < 1000 (exact value node-memory-dependent; 999 on this node)."
+qos = "Burstable"
+oom_lower_exclusive = -997
+oom_upper_exclusive = 1000
+oom_observed = 999
+held = true
+
+[[claim]]
+id = "P3"
+name = "full reservation is Guaranteed"
+statement = "Adding cpu and memory with requests == limits makes the pod Guaranteed with oom_score_adj -997."
+qos = "Guaranteed"
+oom = -997
+held = true
+
+[[claim]]
+id = "P4"
+name = "the GPU-only pod dies first"
+statement = "oom_score_adj is strictly ordered BestEffort(1000) > Burstable(999) > Guaranteed(-997); the GPU-only pod has the maximum, so it is the kernel's first OOM victim."
+order = [1000, 999, -997]
+descending = true
+first_victim = "besteffort"
+held = true
