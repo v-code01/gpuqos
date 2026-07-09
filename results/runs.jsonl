@@ -1,0 +1,4 @@
+{"scenario": "gpu_only_besteffort", "gpu_only": {"name": "gpu-only", "qosClass": "BestEffort", "oom_score_adj": 1000}, "bare": {"name": "bare", "qosClass": "BestEffort", "oom_score_adj": 1000}, "same_as_bare": true}
+{"scenario": "memory_lifts_to_burstable", "name": "gpu-mem", "qosClass": "Burstable", "oom_score_adj": 999}
+{"scenario": "full_reservation_guaranteed", "name": "gpu-full", "qosClass": "Guaranteed", "oom_score_adj": -997}
+{"scenario": "ordering", "oom_by_class": {"besteffort": 1000, "burstable": 999, "guaranteed": -997}, "descending": true, "first_victim": "besteffort"}
